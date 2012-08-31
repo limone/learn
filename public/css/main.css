@@ -1,0 +1,48 @@
+body {
+  background-color: #111;
+  color: #ffeeaa;
+}
+
+#terminal-entry {
+  position: absolute;
+  bottom: 0;
+  height: 60px;
+  margin: 0;
+  padding: 0;
+  display: none;
+  width: 100%;
+}
+
+#terminal-entry label {
+  height: 20px;
+  padding: 4px 6px;
+  margin: 0 10px 9px 10px;
+  line-height: 20px;
+  vertical-align: middle;
+
+  display: block;
+  float: left;
+  clear: left;
+  width: 20px;
+}
+
+#terminal-entry div {
+  zoom: 1; /* set hasLayout for IE6 and below to trigger quirky float model which means div clear the floats */
+  overflow: hidden; /* make inputs clear the floats to give the width you need - auto doesn't work here it creates scrollbar */
+}
+
+input[type='text'], input[type='text']:focus {
+  background-color: #111;
+  box-shadow: none;
+  width: 99%;
+
+  border: 1px solid #111;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+  -webkit-transition: none;
+  -moz-transition: none;
+  -o-transition: none;
+  transition: none;
+  outline: none;
+}
