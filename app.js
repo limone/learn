@@ -1,48 +1,56 @@
-
 /**
  * Module dependencies.
  */
 
-var express = require('express')
-  , routes = require('./routes');
-
-var app = module.exports = express.createServer();
+var express = require('express'), app = express.createServer(), routes = require('./routes'), io = require('socket.io').listen(app);
+var pg = require('pg');
 
 // Configuration
-
-app.configure(function(){
-  app.set('views', __dirname + '/views');
-  app.set('view engine', 'ejs');
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-app.use(express.compiler({ src : __dirname + '/public', enable: ['less']}));
-  app.use(app.router);
-  app.use(express.static(__dirname + '/public'));
+app.configure(function () {
+    app.set('views', __dirname + '/views');
+    app.set('view engine', 'ejs');
+    app.use(express.bodyParser());
+    app.use(express.methodOverride());
+    app.use(express.compiler({ src:__dirname + '/public', enable:['less']}));
+    app.use(app.router);
+    app.use(express.static(__dirname + '/public'));
 });
 
-app.configure('development', function(){
-  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
+app.configure('development', function () {
+    app.use(express.errorHandler({ dumpExceptions:true, showStack:true }));
 });
 
-app.configure('production', function(){
-  app.use(express.errorHandler());
+app.configure('production', function () {
+    app.use(express.errorHandler());
 });
 
-// Compatible
-
-// Now less files with @import 'whatever.less' will work(https://github.com/senchalabs/connect/pull/174)
-var TWITTER_BOOTSTRAP_PATH = './vendor/twitter/bootstrap/less';
-express.compiler.compilers.less.compile = function(str, fn){
-  try {
-    var less = require('less');var parser = new less.Parser({paths: [TWITTER_BOOTSTRAP_PATH]});
-    parser.parse(str, function(err, root){fn(err, root.toCSS());});
-  } catch (err) {fn(err);}
-}
+// Connect to the DB
+var conString = "tcp://powerdns:powerdns2k10^^@plop/powerdns";
+var client = new pg.Client(conString);
+client.connect();
 
 // Routes
-
 app.get('/', routes.index);
 
-app.listen(3000, function(){
-  console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
+app.listen(9090, function () {
+    console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
+});
+
+io.sockets.on('connection', function (socket) {
+    socket.on('sql', function (data) {
+        console.log('Executing SQL statement: ' + data);
+
+        var query = client.query(data);
+        var rows = [];
+        query.on('row', function(row) {
+            console.log('got a row');
+            rows.push(row);
+        });
+        query.on('end', function(result) {
+            //fired once and only once, after the last row has been returned and after all 'row' events are emitted
+            //in this example, the 'rows' array now contains an ordered set of all the rows which we received from postgres
+            console.log(result.rowCount + ' rows were received');
+            socket.emit('sql-output', rows);
+        })
+    });
 });
