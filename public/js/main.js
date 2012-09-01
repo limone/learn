@@ -1,4 +1,12 @@
+// Hack some stuff into the String object
+if (typeof String.prototype.startsWith != 'function') {
+    String.prototype.startsWith = function (str){
+        return this.lastIndexOf(str, 0) === 0;
+    }
+}
+
 var socket = io.connect('http://localhost:9090');
+
 $(document).ready(function()
 {
   $('#terminal-entry').show();
@@ -8,16 +16,29 @@ $(document).ready(function()
 $('#entry').on('keypress', function(event) {
     if(event.which == 13) {
         event.preventDefault();
-        var message = $('#entry').val();
-        $('#entry').val('');
-        socket.emit('sql', message);
-        return false;
+        var message = new String($('#entry').val());
+
+        if (message.startsWith("help")) {
+            $('#sql-data').html("<h1>help</h1><p>Currently available functionality: </p><p><blockquote>* any SQL query you can think of<br/>*\\l - list tables<br/>*\\d &lt;table name&gt; - describe a table</blockquote></p>");
+        } else if (message.startsWith("\\d")) {
+            socket.emit('describe', message);
+        } else if (message.startsWith("\\l")) {
+            socket.emit('list');
+        } else {
+            socket.emit('sql', message);
+            return false;
+        }
     }
 });
 
 socket.on('sql-output', function(data) {
     var headers = "<tr>";
     var rows = "";
+
+    if (data.length === 0) {
+        $("#sql-data").html("<h1>results</h1><div>No results for the provided query.</div>");
+        return;
+    }
 
     $.each(data, function(idx, row) {
         rows += "<tr>";
@@ -32,5 +53,5 @@ socket.on('sql-output', function(data) {
 
     headers += "</tr>";
 
-    $("#sql-data").html("<table>" + headers + rows + "</table>");
+    $("#sql-data").html("<h1>results</h1><table>" + headers + rows + "</table>");
 });
