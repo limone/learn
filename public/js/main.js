@@ -24,6 +24,8 @@ $('#entry').on('keypress', function(event) {
             socket.emit('describe', message);
         } else if (message.startsWith("\\l")) {
             socket.emit('list');
+        } else if (message.toLowerCase() === 'clear') {
+          $('#sql-data').html('');
         } else {
             socket.emit('sql', message);
             return false;
