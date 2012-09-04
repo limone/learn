@@ -5,7 +5,7 @@ if (typeof String.prototype.startsWith != 'function') {
   }
 }
 
-var socket = io.connect('http://localhost:9090');
+var socket = io.connect(document.location.href);
 
 $(document).ready(function () {
   $('#terminal-entry').show();
