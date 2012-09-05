@@ -31,20 +31,6 @@ app.listen(9090, function () {
   console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
 });
 
-// Connect to the DB *after* we get the UI up and running.
-var connString = "tcp://powerdns:powerdns2k10^^@plop/powerdns";
-var client = null, connected = false, pg_err;
-pg.connect(connString, function (err, pg_client) {
-  if (err == null) {
-    console.log("Connected to PG.");
-    connected = true;
-    client = pg_client;
-  } else {
-    pg_err = err;
-    console.log("Could not connect to PG. " + err);
-  }
-});
-
 io.sockets.on('connection', function (socket) {
   socket.on('sql', function (data) {
     console.log('Executing SQL statement: ' + data);
@@ -64,32 +50,39 @@ io.sockets.on('connection', function (socket) {
 });
 
 function query_pg(socket, sql_query) {
-  if (connected === true) {
-    try {
-      var query = client.query(sql_query);
-      var rows = [];
+  // Connect to the DB *after* we get the UI up and running.
+  var connString = "tcp://booktown:booktown@localhost/booktown";
+  pg.connect(connString, function (err, client) {
+    if (err == null) {
+      console.log("Connected to PG.");
 
-      query.on('error', function (pg_error) {
-        console.log("PG returned an error: " + pg_error);
-        socket.emit("sql-output", "<p>There was an error issuing the query: " + pg_error + "</p>", true);
-      });
+      try {
+        var query = client.query(sql_query);
+        var rows = [];
 
-      query.on('row', function (row) {
-        rows.push(row);
-      });
+        query.on('error', function (pg_error) {
+          console.log("PG returned an error: " + pg_error);
+          socket.emit("sql-output", "<p>There was an error issuing the query: " + pg_error + "</p>", true);
+        });
 
-      query.on('end', function (result) {
-        if (result != null) {
-          console.log(result.rowCount + ' rows were received');
-          socket.emit("sql-output", rows, false);
-        }
-      })
-    } catch (exception) {
-      console.log("PG threw an exception: " + exception);
-      socket.emit("sql-output", "<p>There was a problem with issuing the query: " + exception.message + "</p>", true);
+        query.on('row', function (row) {
+          rows.push(row);
+        });
+
+        query.on('end', function (result) {
+          if (result != null) {
+            console.log(result.rowCount + ' rows were received');
+            socket.emit("sql-output", rows, false);
+          }
+        })
+      } catch (exception) {
+        console.log("PG threw an exception: " + exception);
+        socket.emit("sql-output", "<p>There was a problem with issuing the query: " + exception.message + "</p>", true);
+      }
+    } else {
+      console.log("Could not connect to PG due to the following error: " + err);
+      socket.emit("sql-output", "<p>We connected to PG, but had an error while trying to interact with it: " + err + ".  Try again soon...</p>", true);
+      return;
     }
-  } else {
-    console.log("Not connected to PG, cannot execute query.");
-    socket.emit("sql-output", "<p>We're currently not connected to the PG DB server, so no queries are possible.  Try again soon...</p>", true);
-  }
+  });
 }
