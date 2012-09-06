@@ -33,8 +33,7 @@ app.listen(config.port, function () {
 
 io.sockets.on('connection', function (socket) {
   socket.on('sql', function (data) {
-    console.log("Executing SQL statement: %s", data.query);
-    query_db(socket, data.query);
+    query_db(socket, data);
   });
 
   socket.on('list', function () {
@@ -49,28 +48,32 @@ io.sockets.on('connection', function (socket) {
   });
 });
 
-function query_db(socket, sql_query) {
+function query_db(socket, data) {
   var dbConnectionConfig = { host:config.db.host, user:config.db.username, password:config.db.password, database:config.db.database };
   var dbWrapper = new DBWrapper('pg', dbConnectionConfig);
-  try {
-    dbWrapper.connect();
-    dbWrapper.fetchAll(sql_query, null, function (err, result) {
-      if (!err) {
-        console.log("Data came back from the DB, pushing to the client.");
-        socket.emit("output", result, false);
-      } else {
-        console.log("DB returned an error: %s", err);
-        socket.emit("output", "There was an error issuing the query: " + err, true);
-      }
 
-      dbWrapper.close(function (close_err) {
-        if (close_err) {
-          console.log("Error while disconnecting: %s", close_err);
-        }
-      });
-    });
-  } catch (ex) {
-    console.log("Could not connect/query DB: " + ex);
-    socket.emit("output", "There was an error issuing the query: " + ex, true);
+  var pg_query = "SELECT * FROM (" + data.query + ") as nquery LIMIT 100";
+  if (data.offset != null) {
+    pg_query += " OFFSET " + data.offset;
   }
+
+  pg_query = pg_query.replace(";", "");
+  console.log("Executing the following query: %s", pg_query);
+
+  dbWrapper.connect();
+  dbWrapper.fetchAll(pg_query, null, function (err, result) {
+    if (!err) {
+      console.log("Data came back from the DB, pushing to the client.");
+      socket.emit("output", {"result":result, "hasMore":(result.length == 100), "hasPrev":(data.offset != null)}, false);
+    } else {
+      console.log("DB returned an error: %s", err);
+      socket.emit("output", "There was an error issuing the query: " + err, true);
+    }
+
+    dbWrapper.close(function (close_err) {
+      if (close_err) {
+        console.log("Error while disconnecting: %s", close_err);
+      }
+    });
+  });
 }

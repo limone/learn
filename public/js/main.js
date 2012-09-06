@@ -5,6 +5,13 @@ if (typeof String.prototype.startsWith != 'function') {
   }
 }
 
+window.learn = {};
+
+// Show some messages
+function displayMessage(msg) {
+  $("#messages").html(msg);
+}
+
 var socket = io.connect(document.location.href);
 
 $(document).ready(function () {
@@ -26,37 +33,62 @@ $('#entry').on('keypress', function (event) {
     } else if (message.toLowerCase() === 'clear') {
       $('#output-data').html('');
     } else {
+      $('#entry').prop('disabled', true);
+      displayMessage("Hold up - firing off that query for you!");
       socket.emit('sql', {'query':message});
-      return false;
     }
+
+    return false;
   }
 });
 
 socket.on('output', function (data, is_err) {
   if (!is_err) {
-    var headers = "<tr>";
-    var rows = "";
-
-    if (data.length === 0) {
+    if (data.result.length === 0) {
       $("#output-data").html("<h1>results</h1><div><i class='icon-exclamation-sign icon-white'></i> No results for the provided query.</div>");
       return;
     }
 
-    $.each(data, function (idx, row) {
-      rows += "<tr>";
+    console.log("Has prev: " + data.hasPrev + " -- Has more: " + data.hasMore);
+
+    // paging helper
+    var paging = "<div class='row-fluid'>";
+    if (data.hasPrev) {
+      paging += "<div><a onclick='prevPage()'>Previous Page</a></div>";
+    }
+
+    if (data.hasMore) {
+      paging += "<div class='pull-right'><a onclick='nextPage()'>Next Page</a></div>";
+    }
+    paging += "</div>";
+
+    var rows = paging;
+    $.each(data.result, function (idx, row) {
+      if (idx > 100) {
+        // fow now, break out after a bunch of rows
+        return false;
+      }
+
+      rows += "<div class='row-fluid'>";
       $.each(row, function (cellName, cellValue) {
+        rows += "<div class='span2'>";
         if (idx == 0) {
-          headers += "<th>" + cellName + "</th>";
+          rows +="<strong>" + cellName + "</strong>";
+        } else {
+          rows += cellValue;
         }
-        rows += "<td>" + cellValue + "</td>";
+        rows += "</div>";
       });
-      rows += "</tr>";
+      rows += "</div>";
     });
 
-    headers += "</tr>";
+    rows += paging;
 
-    $("#output-data").html("<h1>results</h1><table>" + headers + rows + "</table>");
+    $("#output-data").html("<h1>results</h1>" + rows);
   } else {
     $("#output-data").html("<h1>error</h1>" + "<p><i class='icon-warning-sign icon-white'></i> " + data + "</p>");
   }
+
+  displayMessage("");
+  $('#entry').prop('disabled', false);
 });
