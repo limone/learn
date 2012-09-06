@@ -12,11 +12,11 @@ body {
 .scroll-y { overflow-y: auto; }
 .body.row { top: 0px; bottom: 70px; }
 
-#sql-data {
+#output-data {
     padding: 10px;
 }
 
-#sql-data td {
+#output-data td {
     padding: 5px 0 5px 0;
     min-width: 75px;
 }

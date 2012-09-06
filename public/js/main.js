@@ -18,27 +18,27 @@ $('#entry').on('keypress', function (event) {
     var message = new String($('#entry').val());
 
     if (message.startsWith("help")) {
-      $('#sql-data').html("<h1>help</h1><p>Currently available functionality: </p><p><blockquote>* any SQL query you can think of<br/>*\\l - list tables<br/>*\\d &lt;table name&gt; - describe a table</blockquote></p>");
+      $('#output-data').html("<h1>help</h1><p><i class='icon-question-sign icon-white'></i> Currently available functionality: </p><p><blockquote>* any SQL query you can think of<br/>*\\l - list tables<br/>*\\d &lt;table name&gt; - describe a table</blockquote></p>");
     } else if (message.startsWith("\\d")) {
       socket.emit('describe', message);
     } else if (message.startsWith("\\l")) {
       socket.emit('list');
     } else if (message.toLowerCase() === 'clear') {
-      $('#sql-data').html('');
+      $('#output-data').html('');
     } else {
-      socket.emit('sql', message);
+      socket.emit('sql', {'query':message});
       return false;
     }
   }
 });
 
-socket.on('sql-output', function (data, is_err) {
+socket.on('output', function (data, is_err) {
   if (!is_err) {
     var headers = "<tr>";
     var rows = "";
 
     if (data.length === 0) {
-      $("#sql-data").html("<h1>results</h1><div>No results for the provided query.</div>");
+      $("#output-data").html("<h1>results</h1><div><i class='icon-exclamation-sign icon-white'></i> No results for the provided query.</div>");
       return;
     }
 
@@ -55,8 +55,8 @@ socket.on('sql-output', function (data, is_err) {
 
     headers += "</tr>";
 
-    $("#sql-data").html("<h1>results</h1><table>" + headers + rows + "</table>");
+    $("#output-data").html("<h1>results</h1><table>" + headers + rows + "</table>");
   } else {
-    $("#sql-data").html("<h1>error</h1>" + data);
+    $("#output-data").html("<h1>error</h1>" + "<p><i class='icon-warning-sign icon-white'></i> " + data + "</p>");
   }
 });
