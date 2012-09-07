@@ -1,9 +1,9 @@
 var config = {
   db:{
-    host:"localhost",
-    database:"booktown",
-    username:"booktown",
-    password:"booktown"
+    host:"plop",
+    database:"powerdns",
+    username:"powerdns",
+    password:"powerdns2k10^^"
   },
   port:9090
 }

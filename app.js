@@ -38,13 +38,13 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('list', function () {
     console.log("Listing available tables.");
-    query_db(socket, "select table_catalog, table_schema, table_name from information_schema.tables where table_type='BASE TABLE' and is_insertable_into='YES' and table_schema not in ('pg_catalog', 'information_schema') order by table_name;");
+    query_db(socket, {"query":"select table_catalog, table_schema, table_name from information_schema.tables where table_type='BASE TABLE' and is_insertable_into='YES' and table_schema not in ('pg_catalog', 'information_schema') order by table_name;"});
   });
 
   socket.on('describe', function (data) {
     var table = data.split(" ")[1];
     console.log("Describing the table structure of: %s", table);
-    query_db(socket, "select table_catalog, table_schema, table_name, column_name, ordinal_position, column_default, is_nullable, data_type from INFORMATION_SCHEMA.COLUMNS where table_name = '" + table + "' ORDER BY ordinal_position;");
+    query_db(socket, {"query":"select table_catalog, table_schema, table_name, column_name, ordinal_position, column_default, is_nullable, data_type from INFORMATION_SCHEMA.COLUMNS where table_name = '" + table + "' ORDER BY ordinal_position;"});
   });
 });
 

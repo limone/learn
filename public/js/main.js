@@ -71,7 +71,7 @@ socket.on('output', function (data, is_err) {
 
       rows += "<div class='row-fluid'>";
       $.each(row, function (cellName, cellValue) {
-        rows += "<div class='span2'>";
+        rows += "<div class='span1'>";
         if (idx == 0) {
           rows +="<strong>" + cellName + "</strong>";
         } else {
