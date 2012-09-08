@@ -74,7 +74,7 @@ function query_db(socket, data) {
     pg_query = data.query;
   } else {
     pg_query = "SELECT * FROM (" + data.query + ") as nquery LIMIT 100";
-    if (data.offset != null) {
+    if (data.offset != null && data.offset >= 0) {
       pg_query += " OFFSET " + data.offset;
     }
 
@@ -90,7 +90,7 @@ function query_db(socket, data) {
   dbWrapper.fetchAll(pg_query, null, function (err, result) {
     if (!err) {
       console.log("Data came back from the DB, pushing to the client.");
-      socket.emit("output", {"result":result, "hasMore":(result.length == 100), "hasPrev":(data.offset != null)}, false);
+      socket.emit("output", {"query":data.query, "result":result, "hasMore":(result.length == 100), "hasPrev":(data.offset != null && data.offset > 0)}, false);
     } else {
       console.log("DB returned an error: %s", err);
       socket.emit("output", "There was an error issuing the query: " + err, true);

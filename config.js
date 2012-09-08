@@ -1,9 +1,9 @@
 var config = {
   db:{
-    host:"localhost",
-    database:"booktown",
-    username:"booktown",
-    password:"booktown"
+    host:"plop",
+    database:"pgbench",
+    username:"pgbench",
+    password:"pgbench"
   },
   port:9090
 }

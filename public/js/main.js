@@ -5,7 +5,10 @@ if (typeof String.prototype.startsWith != 'function') {
   }
 }
 
-window.learn = {};
+window.learn = {
+  currentPage : 0,
+  currentQuery : null
+};
 
 // Show some messages
 function displayMessage(msg) {
@@ -20,11 +23,17 @@ $(document).ready(function () {
 });
 
 $(document).on('click', '.nextPage', function(event) {
-  console.log("next page");
+  console.log("Issuing query for %s - %d", window.learn.currentQuery, window.learn.currentPage += 1);
+  $('#entry').prop('disabled', true);
+  displayMessage("Hold up - firing off that query for you!");
+  socket.emit('sql', {'query':window.learn.currentQuery, 'offset':100*window.learn.currentPage});
 });
 
 $(document).on('click', '.prevPage', function(event) {
-  console.log("previous page");
+  console.log("Issuing query for %s - %d", window.learn.currentQuery, window.learn.currentPage -= 1);
+  $('#entry').prop('disabled', true);
+  displayMessage("Hold up - firing off that query for you!");
+  socket.emit('sql', {'query':window.learn.currentQuery, 'offset':100*window.learn.currentPage});
 });
 
 $('#entry').on('keypress', function (event) {
@@ -32,9 +41,9 @@ $('#entry').on('keypress', function (event) {
     event.preventDefault();
     var message = new String($('#entry').val());
 
-    if (message.toLowerCase() === "help") {
+    if (message.toLowerCase().startsWith("help")) {
       $('#output-data').html("<h1>help</h1><p><i class='icon-question-sign icon-white'></i> Currently available functionality: </p><p><blockquote>\\l - list tables<br/>\\d &lt;table name&gt; - describe a table<br/>* any SQL query you can think of<br/><br/>reconnect - reconnect to the DB if something went heinously wrong</blockquote></p>");
-    } else if (message.toLowerCase() === "reconnect") {
+    } else if (message.toLowerCase().startsWith("reconnect")) {
       $('#entry').prop('disabled', true);
       displayMessage("Hold up - attempting to (re)connect to the database.");
       socket.emit('reconnect', null);
@@ -51,6 +60,7 @@ $('#entry').on('keypress', function (event) {
     } else {
       $('#entry').prop('disabled', true);
       displayMessage("Hold up - firing off that query for you!");
+      window.learn.currentPage = 0;
       socket.emit('sql', {'query':message});
     }
 
@@ -75,6 +85,7 @@ socket.on('output', function (data, is_err) {
     }
 
     console.log("Has prev: " + data.hasPrev + " -- Has more: " + data.hasMore);
+    window.learn.currentQuery = data.query;
 
     // paging helper
     var paging = "<div class='row-fluid'>";
