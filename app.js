@@ -1,6 +1,7 @@
 // dependencies
 var express = require('express'), app = express.createServer(), routes = require('./routes'), io = require('socket.io').listen(app);
-var config = require('./config'), DBWrapper = require('node-dbi').DBWrapper/*, DBExpr = require('node-dbi').DBExpr*/;
+var config = require('./config'), DBWrapper = require('node-dbi').DBWrapper;
+var Logger = require('devnull'), log = new Logger;
 
 // config
 var dbConnectionConfig = { host:config.db.host, user:config.db.username, password:config.db.password, database:config.db.database };
@@ -32,7 +33,7 @@ app.configure('production', function () {
 app.get('/', routes.index);
 
 app.listen(config.port, function () {
-  console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
+  log.debug("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
 });
 
 io.sockets.on('connection', function (socket) {
@@ -42,29 +43,29 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('reconnect', function () {
     if (canConnect) {
-      console.log("Connection to the database validated.");
+      log.debug("Connection to the database validated.");
       socket.emit("output", {"header":"Reconnected", "message":"We successfully (re)connected to the database."});
     } else {
-      console.log("Could not connect to the database.");
+      log.debug("Could not connect to the database.");
       socket.emit("output", "Sadly, we could not (re)connect to the database at this time.", true);
     }
   });
 
   socket.on('list', function () {
-    console.log("Listing available tables.");
+    log.debug("Listing available tables.");
     query_db(socket, {"nowrap":true, "query":"select table_catalog, table_schema, table_name from information_schema.tables where table_type='BASE TABLE' and is_insertable_into='YES' and table_schema not in ('pg_catalog', 'information_schema') order by table_name;"});
   });
 
   socket.on('describe', function (data) {
     var table = data.split(" ")[1];
-    console.log("Describing the table structure of: %s", table);
+    log.debug("Describing the table structure of: %s", table);
     query_db(socket, {"nowrap":true, "query":"select table_catalog, table_schema, table_name, column_name, ordinal_position, column_default, is_nullable, data_type from INFORMATION_SCHEMA.COLUMNS where table_name = '" + table + "' ORDER BY ordinal_position;"});
   });
 });
 
 function query_db(socket, data) {
   if (!canConnect) {
-    console.log("Initial attempt to connect to the DB has not succeeded, will not proceed.");
+    log.debug("Initial attempt to connect to the DB has not succeeded, will not proceed.");
     socket.emit("output", "We have not been able to connect to the database, please try again shortly.", true);
     return;
   }
@@ -80,48 +81,48 @@ function query_db(socket, data) {
 
     pg_query = pg_query.replace(";", "");
   }
-  console.log("Executing the following query: %s", pg_query);
+  log.debug("Executing the following query: %s", pg_query);
 
-  console.log("Connecting to the DB.");
+  log.debug("Connecting to the DB.");
   var dbWrapper = new DBWrapper('pg', dbConnectionConfig);
   dbWrapper.connect();
 
-  console.log("Querying DB.");
+  log.debug("Querying DB.");
   dbWrapper.fetchAll(pg_query, null, function (err, result) {
     if (!err) {
-      console.log("Data came back from the DB, pushing to the client.");
+      log.debug("Data came back from the DB, pushing to the client.");
       socket.emit("output", {"query":data.query, "result":result, "hasMore":(result.length == 100), "hasPrev":(data.offset != null && data.offset > 0)}, false);
     } else {
-      console.log("DB returned an error: %s", err);
+      log.error("DB returned an error: %s", err);
       socket.emit("output", "There was an error issuing the query: " + err, true);
     }
 
     dbWrapper.close(function (close_err) {
-      console.log("Disconnected from server.");
+      log.debug("Disconnected from server.");
       if (close_err) {
-        console.log("Error while disconnecting: %s", close_err);
+        log.error("Error while disconnecting: %s", close_err);
       }
     });
   });
 }
 
 function testDbConnection() {
-  console.log("Testing DB connection.");
+  log.debug("Testing DB connection.");
   var dbWrapper = new DBWrapper('pg', dbConnectionConfig);
   dbWrapper.connect(function (state) {
     if (state && state.name === "error") {
-      console.log("Could not connect to the DB: %s", state.error);
+      log.error("Could not connect to the DB: %s", state.message);
       canConnect = false;
     } else {
-      console.log("DB connection successful, allowing future attempts.");
+      log.debug("DB connection successful, allowing future attempts.");
       canConnect = true;
     }
 
     if (dbWrapper.isConnected()) {
       dbWrapper.close(function (err) {
-        console.log("Disconnected from DB.");
+        log.debug("Disconnected from DB.");
         if (err) {
-          console.log("Error while disconnecting from DB: %s", err);
+          log.error("Error while disconnecting from DB: %s", err);
         }
       })
     }

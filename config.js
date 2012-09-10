@@ -1,6 +1,6 @@
 var config = {
   db:{
-    host:"plop",
+    host:"localhost",
     database:"pgbench",
     username:"pgbench",
     password:"pgbench"
