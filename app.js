@@ -1,9 +1,45 @@
-// dependencies
-var express = require('express'), app = express.createServer(), routes = require('./routes'), io = require('socket.io').listen(app);
-var config = require('./config'), DBWrapper = require('node-dbi').DBWrapper;
+// load stuff that has no pre-reqs
+var express = require('express'), DBWrapper = require('node-dbi').DBWrapper;
 var Logger = require('devnull'), log = new Logger;
 
-// config
+// config - load this first so we can figure out what kind of express stuff we need to do
+var config = require('./config');
+
+var app, secondaryApp;
+if (config.enableSsl) {
+  var fs = require("fs");
+
+  httpsOptions = {
+    key:fs.readFileSync(config.sslKey),
+    cert:fs.readFileSync(config.sslCert)
+  }
+  app = express.createServer(httpsOptions);
+  secondaryApp = express.createServer();
+
+  secondaryApp.all('*', function (req, res) {
+      var hostname = ( req.headers.host.match(/:/g) ) ? req.headers.host.slice( 0, req.headers.host.indexOf(":") ) : req.headers.host
+
+      var redirectUrl = "https://" + hostname;
+      if (config.sslPort != 443) {
+        redirectUrl +=  ":" + config.sslPort;
+      }
+      redirectUrl += req.url;
+
+      log.debug("HTTP: %s - redirecting to %s", req.url, redirectUrl);
+      res.redirect(redirectUrl);
+    }
+  )
+  secondaryApp.listen(config.port);
+  log.info("SSL support was configured - server will listen on %d for HTTP requests which will redirect to the secure port on %d.", config.port, config.sslPort);
+} else {
+  log.info("SSL support NOT configured - server will listen for plain HTTP requests on port %d.", config.port);
+  app = express.createServer();
+}
+
+// stuff that is loaded now that we know what our *REAL* app should be
+var routes = require('./routes'), io = require('socket.io').listen(app);
+
+// DB/runtime config
 var dbConnectionConfig = { host:config.db.host, user:config.db.username, password:config.db.password, database:config.db.database };
 var canConnect = testDbConnection();
 
@@ -32,7 +68,7 @@ app.configure('production', function () {
 // Routes
 app.get('/', routes.index);
 
-app.listen(config.port, function () {
+app.listen(config.enableSsl ? config.sslPort : config.port, function () {
   log.debug("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
 });
 
@@ -110,7 +146,7 @@ function testDbConnection() {
   log.debug("Testing DB connection.");
   var dbWrapper = new DBWrapper('pg', dbConnectionConfig);
   dbWrapper.connect(function (state) {
-    if (state && state.name === "error") {
+    if ((state && state.name === "error") || (state && state.errno != null)) {
       log.error("Could not connect to the DB: %s", state.message);
       canConnect = false;
     } else {
