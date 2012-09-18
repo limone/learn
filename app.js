@@ -10,18 +10,18 @@ if (config.enableSsl) {
   var fs = require("fs");
 
   httpsOptions = {
-    key:fs.readFileSync(config.sslKey),
+    key: fs.readFileSync(config.sslKey),
     cert:fs.readFileSync(config.sslCert)
   }
   app = express.createServer(httpsOptions);
   secondaryApp = express.createServer();
 
   secondaryApp.all('*', function (req, res) {
-      var hostname = ( req.headers.host.match(/:/g) ) ? req.headers.host.slice( 0, req.headers.host.indexOf(":") ) : req.headers.host
+      var hostname = ( req.headers.host.match(/:/g) ) ? req.headers.host.slice(0, req.headers.host.indexOf(":")) : req.headers.host
 
       var redirectUrl = "https://" + hostname;
       if (config.sslPort != 443) {
-        redirectUrl +=  ":" + config.sslPort;
+        redirectUrl += ":" + config.sslPort;
       }
       redirectUrl += req.url;
 
@@ -65,8 +65,22 @@ app.configure('production', function () {
   app.use(express.errorHandler());
 });
 
+// Authentication
+var realm = require('express-http-auth').realm('learn!');
+var checkUser = function (req, res, next) {
+  log.debug("Validating authentication for user %s.", req.username);
+  if (req.username == 'Foo' && req.password == 'Bar') {
+    next();
+  } else {
+    log.warning("Could not validate credentials for %s.", req.username);
+    res.send(403);
+  }
+}
+
+var private = [realm, checkUser];
+
 // Routes
-app.get('/', routes.index);
+app.get('/', private, routes.index);
 
 app.listen(config.enableSsl ? config.sslPort : config.port, function () {
   log.debug("Express server listening on port %d in %s mode", app.address().port, app.settings.env);

@@ -3,11 +3,13 @@
   "version":     "0.0.1",
   "private":     true,
   "dependencies":{
-    "express":  "2.5.11",
-    "less":     ">= 0.0.1",
-    "ejs":      ">= 0.0.1",
-    "socket.io":"0.9.10",
-    "node-dbi": "0.6.1",
-    "devnull":  "0.0.9"
+    "express":          "2.5.11",
+    "less":             ">= 0.0.1",
+    "ejs":              ">= 0.0.1",
+    "socket.io":        "0.9.10",
+    "node-dbi":         "0.6.1",
+    "devnull":          "0.0.9",
+    "express-http-auth":"0.1.0",
+    "insanehash":       "0.0.1"
   }
 }
