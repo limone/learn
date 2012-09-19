@@ -1,6 +1,7 @@
 // load stuff that has no pre-reqs
 var express = require('express'), DBWrapper = require('node-dbi').DBWrapper;
 var Logger = require('devnull'), log = new Logger;
+var _ = require('underscore'), ih = require('insanehash').crypto;
 
 // config - load this first so we can figure out what kind of express stuff we need to do
 var config = require('./config');
@@ -17,17 +18,17 @@ if (config.enableSsl) {
   secondaryApp = express.createServer();
 
   secondaryApp.all('*', function (req, res) {
-      var hostname = ( req.headers.host.match(/:/g) ) ? req.headers.host.slice(0, req.headers.host.indexOf(":")) : req.headers.host
+                     var hostname = ( req.headers.host.match(/:/g) ) ? req.headers.host.slice(0, req.headers.host.indexOf(":")) : req.headers.host
 
-      var redirectUrl = "https://" + hostname;
-      if (config.sslPort != 443) {
-        redirectUrl += ":" + config.sslPort;
-      }
-      redirectUrl += req.url;
+                     var redirectUrl = "https://" + hostname;
+                     if (config.sslPort != 443) {
+                       redirectUrl += ":" + config.sslPort;
+                     }
+                     redirectUrl += req.url;
 
-      log.debug("HTTP: %s - redirecting to %s", req.url, redirectUrl);
-      res.redirect(redirectUrl);
-    }
+                     log.debug("HTTP: %s - redirecting to %s", req.url, redirectUrl);
+                     res.redirect(redirectUrl);
+                   }
   )
   secondaryApp.listen(config.port);
   log.info("SSL support was configured - server will listen on %d for HTTP requests which will redirect to the secure port on %d.", config.port, config.sslPort);
@@ -70,13 +71,20 @@ var realm = require('express-http-auth').realm('learn!');
 var checkUser = function (req, res, next) {
   log.debug("Validating authentication for user %s.", req.username);
 
-  config.auth.users.each(function(user) {
-    log.debug("Comparing %s to %s", req.username, user.user);
+  var validUser = false;
+  _.each(config.auth.users, function (user) {
+    if (req.username.toLowerCase() === user.user.toLowerCase()) {
+      log.debug("Comparing credentials for %s.", req.username);
+      if (ih.skein(req.password) === user.password) {
+        log.debug("Validated credentials for %s successfully.", req.username);
+        next();
+        validUser = true;
+        return;
+      }
+    }
   });
 
-  if (req.username == 'Foo' && req.password == 'Bar') {
-    next();
-  } else {
+  if (!validUser) {
     log.warning("Could not validate credentials for %s.", req.username);
     res.send(403);
   }

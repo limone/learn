@@ -1,6 +1,6 @@
 var config = {
   db:{
-    host:"wub",
+    host:"127.0.0.1",
     database:"pgbench",
     username:"pgbench",
     password:"pgbench"
@@ -17,7 +17,7 @@ var config = {
 
   port:9080,
   enableSsl:true,
-  sslPort:443,
+  sslPort:9443,
   sslKey:'private/ssl.key',
   sslCert:'private/ssl.crt'
 }
