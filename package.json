@@ -10,6 +10,7 @@
     "node-dbi":         "0.6.1",
     "devnull":          "0.0.9",
     "express-http-auth":"0.1.0",
-    "insanehash":       "0.0.1"
+    "insanehash":       "0.0.1",
+    "commander":        "1.0.4"
   }
 }

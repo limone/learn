@@ -69,6 +69,11 @@ app.configure('production', function () {
 var realm = require('express-http-auth').realm('learn!');
 var checkUser = function (req, res, next) {
   log.debug("Validating authentication for user %s.", req.username);
+
+  config.auth.users.each(function(user) {
+    log.debug("Comparing %s to %s", req.username, user.user);
+  });
+
   if (req.username == 'Foo' && req.password == 'Bar') {
     next();
   } else {
